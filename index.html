@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Computer Networks Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: "Slate" from Tailwind's default colors with a "Sky" accent. -->
+    <!-- Application Structure Plan: The application is structured as an interactive dashboard. A fixed sidebar navigation allows users to filter questions by logical categories (Fundamentals, Addressing, Protocols, Security, etc.). This is more intuitive for studying than a linear list. The main content area uses an accordion component for each Q&A, encouraging active recall. A search bar provides instant filtering across all topics. A dedicated "Visualizations" section uses charts and diagrams to compare core concepts, making complex information easier to digest. This structure prioritizes user-guided learning and quick information retrieval. -->
+    <!-- Visualization & Content Choices: 
+        - OSI vs TCP/IP Layers: Goal: Compare model complexity. Viz: Bar Chart. Interaction: Hover tooltips. Justification: A simple bar chart is the clearest way to show the difference in the number of layers. Library: Chart.js.
+        - TCP vs UDP Header Size: Goal: Compare protocol overhead. Viz: Bar Chart. Interaction: Hover tooltips. Justification: Visually represents the lightweight nature of UDP vs. TCP. Library: Chart.js.
+        - Network Models Diagram: Goal: Organize protocols by layer. Viz: HTML/CSS Diagram. Interaction: Static visual aid. Justification: A visual map helps users place protocols within the TCP/IP and OSI models. Method: Tailwind CSS.
+        - Three-way Handshake: Goal: Explain a process. Viz: HTML/CSS Diagram. Interaction: Static visual aid. Justification: A step-by-step diagram is more effective than text alone for explaining sequential processes. Method: Tailwind CSS.
+        - Q&A Content: Goal: Inform/Organize. Viz: Accordion List. Interaction: Click to expand/collapse. Justification: Hides answers by default to promote self-testing and reduces information overload. Method: Vanilla JS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+        }
+        .accordion-content.open {
+            max-height: 2000px; /* Increased for more detailed answers */
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        html.dark ::-webkit-scrollbar-track { background: #1e293b; }
+        html.dark ::-webkit-scrollbar-thumb { background: #475569; }
+        html.dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="w-full md:w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 p-4 md:p-6 md:fixed md:h-full transition-transform transform -translate-x-full md:translate-x-0 z-30">
+            <h1 class="text-2xl font-bold text-sky-600 dark:text-sky-400 mb-6">Network Guide</h1>
+            <nav id="nav-menu" class="space-y-2">
+                <a href="#visualizations" data-category="visualizations" class="nav-link flex items-center px-4 py-2 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-600 dark:hover:text-sky-400 transition-colors">Visualizations</a>
+                <a href="#fundamentals" data-category="fundamentals" class="nav-link flex items-center px-4 py-2 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-600 dark:hover:text-sky-400 transition-colors">Fundamentals</a>
+                <a href="#addressing" data-category="addressing" class="nav-link flex items-center px-4 py-2 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-600 dark:hover:text-sky-400 transition-colors">Addressing & Routing</a>
+                <a href="#transport" data-category="transport" class="nav-link flex items-center px-4 py-2 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-600 dark:hover:text-sky-400 transition-colors">Transport Layer</a>
+                <a href="#application" data-category="application" class="nav-link flex items-center px-4 py-2 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-600 dark:hover:text-sky-400 transition-colors">Application Layer</a>
+                <a href="#security" data-category="security" class="nav-link flex items-center px-4 py-2 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-600 dark:hover:text-sky-400 transition-colors">Security</a>
+                <a href="#diagnostics" data-category="diagnostics" class="nav-link flex items-center px-4 py-2 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-600 dark:hover:text-sky-400 transition-colors">Tools & Diagnostics</a>
+                <a href="#cisco" data-category="cisco" class="nav-link flex items-center px-4 py-2 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-600 dark:hover:text-sky-400 transition-colors">Cisco & Important Qs</a>
+            </nav>
+            <div class="mt-8 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <button id="theme-toggle" class="w-full flex items-center justify-center px-4 py-2 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                    <span id="theme-icon-light" class="hidden">☀️</span>
+                    <span id="theme-icon-dark" class="hidden">🌙</span>
+                    <span class="ml-2">Toggle Theme</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Mobile Header -->
+        <header class="md:hidden sticky top-0 bg-white dark:bg-slate-800 shadow-md p-4 flex justify-between items-center z-20">
+            <h1 class="text-xl font-bold text-sky-600 dark:text-sky-400">Network Guide</h1>
+            <button id="menu-toggle" class="p-2 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 md:ml-64 p-4 sm:p-6 lg:p-8">
+            <div class="max-w-7xl mx-auto">
+                <div class="mb-6">
+                    <input type="search" id="search-box" placeholder="Search for a topic (e.g., TCP, firewall)..." class="w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 dark:focus:ring-sky-400 dark:focus:border-sky-400 outline-none transition-shadow">
+                </div>
+                
+                <div id="content-area">
+                    <!-- Content will be dynamically inserted here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const networkData = {
+            fundamentals: {
+                title: "Fundamentals",
+                info: `
+                    <h3 class="text-2xl font-bold mb-4">Key Topics for Placements</h3>
+                    <p class="mb-4 text-slate-600 dark:text-slate-400">This section covers the foundational concepts of computer networking. Understanding these topics is crucial as they form the basis for all other advanced concepts. Focus on the roles of different network models, the types of networks, and the functions of basic hardware.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-lg">Network Models: OSI vs. TCP/IP</h4>
+                            <p>You must know the layers of both models and their core responsibilities. Be prepared to compare them. The OSI model is a 7-layer theoretical framework, while the TCP/IP model is a 4-layer practical model that the internet is built upon. Know which protocols operate at which layer (e.g., HTTP at Application, TCP/UDP at Transport, IP at Internet/Network).</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Types of Networks</h4>
+                            <p>Understand the scale and purpose of different network types: <strong>LAN</strong> (Local Area Network, e.g., home/office), <strong>WAN</strong> (Wide Area Network, e.g., the internet), and <strong>MAN</strong> (Metropolitan Area Network, e.g., a city-wide network).</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Network Topologies</h4>
+                            <p>Familiarize yourself with the layout structures of networks: <strong>Bus</strong>, <strong>Star</strong> (most common in modern LANs), <strong>Ring</strong>, <strong>Mesh</strong>, and <strong>Hybrid</strong>. Understand the advantages and disadvantages of each.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Basic Network Devices</h4>
+                            <p>Know the function and operating layer of these devices: <strong>Hub</strong> (Layer 1, broadcasts to all ports), <strong>Switch</strong> (Layer 2, forwards based on MAC addresses), <strong>Router</strong> (Layer 3, routes between different networks based on IP addresses), and <strong>Bridge</strong> (Layer 2, connects two LAN segments).</p>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    { id: 1, question: "What is TCP/IP?", answer: `<p>TCP/IP (Transmission Control Protocol/Internet Protocol) is the foundational suite of communication protocols used for the internet and most modern computer networks. It provides end-to-end data communication, specifying how data should be packetized, addressed, transmitted, routed, and received. Unlike the theoretical OSI model, TCP/IP is a practical model that was developed alongside the protocols themselves.</p><p class="mt-2">It's a four-layer model:</p><ul class="list-disc pl-6 mt-2 space-y-1"><li><strong>Application Layer:</strong> This is the top layer where network applications and their protocols reside. It provides services directly to user applications. Examples: HTTP (Web), SMTP (Email), FTP (File Transfer), DNS (Domain Naming).</li><li><strong>Transport Layer:</strong> This layer provides host-to-host communication services for applications. It handles flow control, error correction, and establishes connections. The two main protocols are TCP (reliable, connection-oriented) and UDP (unreliable, connectionless).</li><li><strong>Internet Layer:</strong> This layer is responsible for logical addressing (IP addresses) and routing packets across different networks to their final destination. The primary protocol is the Internet Protocol (IP).</li><li><strong>Network Access/Link Layer:</strong> This is the lowest layer, dealing with the physical transmission of data over the network medium. It includes technologies like Ethernet, Wi-Fi, and protocols like ARP for resolving IP addresses to physical MAC addresses.</li></ul>` },
+                    { id: 5, question: "What is the purpose of the OSI model?", answer: `<p>The OSI (Open Systems Interconnection) model is a conceptual framework that standardizes the functions of a telecommunications or computing system into seven distinct layers. Its main purpose is to guide vendors and developers so they can create interoperable network hardware and software that can communicate with each other, regardless of the underlying technology.</p><p class="mt-2 font-semibold">The seven layers are:</p><ol class="list-decimal pl-6 mt-1"><li>Physical (Transmits raw bits)</li><li>Data Link (Organizes bits into frames, MAC addressing)</li><li>Network (Logical addressing and routing)</li><li>Transport (End-to-end connection and reliability)</li><li>Session (Manages sessions between applications)</li><li>Presentation (Data translation, encryption, compression)</li><li>Application (Provides services to user applications)</li></ol>` },
+                    { id: 7, question: "What is the difference between the OSI and TCP/IP models?", answer: `<div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-100 dark:bg-slate-700"><th class="p-2 border dark:border-slate-600">Feature</th><th class="p-2 border dark:border-slate-600">OSI Model</th><th class="p-2 border dark:border-slate-600">TCP/IP Model</th></tr></thead><tbody><tr><td class="p-2 border dark:border-slate-600 font-semibold">Layers</td><td class="p-2 border dark:border-slate-600">7 layers</td><td class="p-2 border dark:border-slate-600">4 layers</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Development</td><td class="p-2 border dark:border-slate-600">Developed by ISO as a theoretical model.</td><td class="p-2 border dark:border-slate-600">Developed by the US DoD as a practical implementation.</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Usage</td><td class="p-2 border dark:border-slate-600">Primarily a teaching and reference tool.</td><td class="p-2 border dark:border-slate-600">The de facto standard for the internet.</td></tr></tbody></table></div>` },
+                    { id: 39, question: "What is a socket?", answer: `<p>A socket is one endpoint of a two-way communication link between two programs on the network. A socket is bound to a port number so the Transport Layer can identify the application that data is destined for. A socket is an IP address combined with a port number (e.g., <code>192.168.1.1:80</code>).</p>` },
+                ]
+            },
+            addressing: {
+                title: "Addressing & Routing",
+                info: `
+                    <h3 class="text-2xl font-bold mb-4">Key Topics for Placements</h3>
+                    <p class="mb-4 text-slate-600 dark:text-slate-400">This section focuses on how data finds its way across networks. Mastery of IP addressing, subnetting, and the core principles of routing are frequently tested in technical interviews and are essential for any network-related role.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-lg">IP Addressing (IPv4 & IPv6)</h4>
+                            <p>Understand the structure of an IPv4 address (32-bit, 4 octets) and the different classes (A, B, C, D, E). Be aware of private IP address ranges (e.g., 192.168.x.x, 10.x.x.x). Also, know the basics of IPv6 (128-bit, hexadecimal format) and why it's necessary.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Subnetting</h4>
+                            <p>This is a critical skill. You must be able to take a given IP address range and a requirement (e.g., "create 5 subnets") and calculate the new subnet mask, the network address for each subnet, the valid host range, and the broadcast address. Practice problems are the key to mastering this.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">MAC Address vs. IP Address</h4>
+                            <p>Clearly explain the difference: a MAC address is a permanent, physical address used for local (Layer 2) communication, while an IP address is a logical, configurable address used for routing across networks (Layer 3).</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Routing Protocols</h4>
+                            <p>Know the main categories: <strong>Distance-Vector</strong> (e.g., RIP) and <strong>Link-State</strong> (e.g., OSPF). Understand how they differ in terms of how they learn about the network and calculate the best path. Also, know the difference between <strong>Interior Gateway Protocols (IGP)</strong> like OSPF/EIGRP used within a single autonomous system, and <strong>Exterior Gateway Protocol (EGP)</strong> like BGP used between autonomous systems (i.e., the internet's routing protocol).</p>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    { id: 10, question: "What is a MAC address?", answer: `<p>A MAC (Media Access Control) address is a unique, 48-bit hardware identifier assigned to a network interface controller (NIC). It is used for communication on the same local network (at the Data Link Layer). MAC addresses are written in hexadecimal format (e.g., <code>00:0A:95:9D:68:16</code>).</p>` },
+                    { id: 11, question: "What is the difference between a MAC address and an IP address?", answer: `<div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-100 dark:bg-slate-700"><th class="p-2 border dark:border-slate-600">Feature</th><th class="p-2 border dark:border-slate-600">MAC Address</th><th class="p-2 border dark:border-slate-600">IP Address</th></tr></thead><tbody><tr><td class="p-2 border dark:border-slate-600 font-semibold">Layer</td><td class="p-2 border dark:border-slate-600">Data Link Layer (Layer 2)</td><td class="p-2 border dark:border-slate-600">Network Layer (Layer 3)</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Scope</td><td class="p-2 border dark:border-slate-600">Local network communication.</td><td class="p-2 border dark:border-slate-600">Global network communication.</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Assignment</td><td class="p-2 border dark:border-slate-600">Assigned by hardware manufacturer; permanent.</td><td class="p-2 border dark:border-slate-600">Assigned by network admin/ISP; can be dynamic.</td></tr></tbody></table></div>` },
+                    { id: 12, question: "What is a router?", answer: `<p>A router is a networking device that operates at the Network Layer (Layer 3). Its primary function is to forward data packets between different computer networks. Routers use routing tables to determine the best path for forwarding packets based on their destination IP address.</p>` },
+                    { id: 13, question: "What is the difference between a router and a switch?", answer: `<div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-100 dark:bg-slate-700"><th class="p-2 border dark:border-slate-600">Feature</th><th class="p-2 border dark:border-slate-600">Router</th><th class="p-2 border dark:border-slate-600">Switch</th></tr></thead><tbody><tr><td class="p-2 border dark:border-slate-600 font-semibold">Layer</td><td class="p-2 border dark:border-slate-600">Network Layer (Layer 3)</td><td class="p-2 border dark:border-slate-600">Data Link Layer (Layer 2)</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Function</td><td class="p-2 border dark:border-slate-600">Connects different networks.</td><td class="p-2 border dark:border-slate-600">Connects devices on the same network.</td></tr></tbody></table></div>` },
+                    { id: 14, question: "What is subnetting?", answer: `<p>Subnetting is the process of dividing a large IP network into smaller, more manageable sub-networks or "subnets." This is done by "borrowing" bits from the host portion of an IP address to create a subnet mask. Subnetting improves network performance, enhances security, and simplifies management.</p>` },
+                    { id: 47, question: "What is CIDR?", answer: `<p>CIDR (Classless Inter-Domain Routing) is a method for allocating IP addresses and routing. It replaced classful addressing and uses a variable-length subnet mask for more efficient use of IPv4 addresses. An address looks like <code>192.168.1.0/24</code>, where /24 is the network prefix length.</p>` },
+                ]
+            },
+            transport: {
+                title: "Transport Layer",
+                info: `
+                    <h3 class="text-2xl font-bold mb-4">Key Topics for Placements</h3>
+                    <p class="mb-4 text-slate-600 dark:text-slate-400">The Transport Layer is responsible for end-to-end communication between hosts. Interviews will heavily focus on the differences between TCP and UDP, and the mechanisms TCP uses to ensure reliable data delivery.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-lg">TCP vs. UDP</h4>
+                            <p>This is one of the most common questions. You must know that TCP is connection-oriented and reliable, while UDP is connectionless and unreliable. Be ready to provide examples of applications for each (e.g., TCP for web/email, UDP for video streaming/gaming) and explain why that protocol is chosen.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">TCP Three-Way Handshake</h4>
+                            <p>Understand the SYN, SYN-ACK, ACK process for establishing a TCP connection. Be able to draw it or explain it step-by-step. This demonstrates your understanding of how reliable connections are initiated.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Flow Control</h4>
+                            <p>Explain how TCP prevents a fast sender from overwhelming a slow receiver. The key mechanism to mention is the <strong>Sliding Window Protocol</strong>, where the receiver advertises a "window size" indicating how much data it can currently buffer.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Congestion Control</h4>
+                            <p>Differentiate this from flow control. Congestion control is about preventing the network itself from becoming overloaded. Mention key TCP algorithms like <strong>Slow Start</strong> and <strong>Congestion Avoidance</strong>, which dynamically adjust the sending rate based on network conditions (like packet loss).</p>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    { id: 2, question: "What is the difference between TCP and UDP?", answer: `<p>TCP (Transmission Control Protocol) and UDP (User Datagram Protocol) are two core protocols at the Transport Layer, but they serve very different purposes.</p><div class="overflow-x-auto mt-4"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-100 dark:bg-slate-700"><th class="p-2 border dark:border-slate-600">Feature</th><th class="p-2 border dark:border-slate-600">TCP</th><th class="p-2 border dark:border-slate-600">UDP</th></tr></thead><tbody><tr><td class="p-2 border dark:border-slate-600 font-semibold">Connection</td><td class="p-2 border dark:border-slate-600">Connection-oriented. It establishes a connection via a three-way handshake before data transfer, ensuring the receiver is ready.</td><td class="p-2 border dark:border-slate-600">Connectionless. It sends data packets (datagrams) without establishing a connection. It's a "fire and forget" protocol.</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Reliability</td><td class="p-2 border dark:border-slate-600">High. Guarantees that data packets will be delivered in order, without errors. It uses sequence numbers and acknowledgements to re-transmit lost packets.</td><td class="p-2 border dark:border-slate-600">Unreliable. There is no guarantee of delivery, order, or error checking. Packets may be lost, duplicated, or arrive out of order.</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Flow Control</td><td class="p-2 border dark:border-slate-600">Includes flow control mechanisms (like the sliding window) to avoid overwhelming the receiver.</td><td class="p-2 border dark:border-slate-600">No flow control. It sends data as fast as the application desires.</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Speed</td><td class="p-2 border dark:border-slate-600">Slower due to the overhead of its reliability features.</td><td class="p-2 border dark:border-slate-600">Faster and more lightweight due to its simplicity.</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Use Cases</td><td class="p-2 border dark:border-slate-600">Web browsing (HTTP/S), file transfer (FTP), email (SMTP).</td><td class="p-2 border dark:border-slate-600">Video streaming, online gaming, DNS, VoIP.</td></tr></tbody></table></div>` },
+                    { id: 38, question: "What is a three-way handshake?", answer: `<p>The TCP three-way handshake is the process used to establish a reliable connection between a client and a server before data transfer.</p><ol class="list-decimal pl-6 mt-2 space-y-1"><li><strong>SYN:</strong> The client sends a segment with the SYN (Synchronize) flag set to the server.</li><li><strong>SYN-ACK:</strong> The server replies with a segment with both SYN and ACK (Acknowledge) flags set.</li><li><strong>ACK:</strong> The client sends a final segment with the ACK flag set, confirming the connection.</li></ol>` },
+                    { id: 51, question: "What is flow control?", answer: `<p>Flow control is a mechanism used in the Transport Layer to manage the rate of data transmission between two nodes to prevent a fast sender from overwhelming a slow receiver. TCP uses a sliding window protocol for flow control.</p>` },
+                    { id: 52, question: "What is congestion control?", answer: `<p>Congestion control is a mechanism used to prevent or reduce network congestion, which occurs when a network carries more data than it can handle. TCP uses algorithms like slow start and congestion avoidance to manage the sending rate.</p>` },
+                ]
+            },
+            application: {
+                title: "Application Layer",
+                info: `
+                    <h3 class="text-2xl font-bold mb-4">Key Topics for Placements</h3>
+                    <p class="mb-4 text-slate-600 dark:text-slate-400">The Application Layer is where users interact with the network. Questions in this area test your knowledge of the common protocols that power the internet and everyday applications. Be able to explain what each protocol does and its key features.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-lg">DNS (Domain Name System)</h4>
+                            <p>Explain its purpose (translating domain names to IP addresses) and the hierarchical process of a DNS lookup (client -> resolver -> root -> TLD -> authoritative server).</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">HTTP & HTTPS</h4>
+                            <p>Describe HTTP as the protocol for the web. The key difference you must highlight for HTTPS is security through SSL/TLS encryption. Know the default ports (80 for HTTP, 443 for HTTPS) and be able to explain what common status codes mean (200, 404, 500).</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Email Protocols (SMTP, POP3, IMAP)</h4>
+                            <p>Distinguish between these three: <strong>SMTP</strong> is used for sending email. <strong>POP3</strong> downloads email from the server to a single client (and usually deletes it from the server). <strong>IMAP</strong> synchronizes email with the server, allowing access from multiple clients.</p>
+                        </div>
+                         <div>
+                            <h4 class="font-semibold text-lg">DHCP (Dynamic Host Configuration Protocol)</h4>
+                            <p>Explain that DHCP automatically assigns IP addresses to devices on a network, simplifying administration. You should know the four-step DORA process (Discover, Offer, Request, Acknowledge).</p>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    { id: 3, question: "What is DNS?", answer: `<p>DNS (Domain Name System) acts as the internet's phonebook. Its primary function is to translate human-friendly domain names (e.g., <code>www.google.com</code>) into machine-readable IP addresses (e.g., <code>142.250.196.196</code>). This process, called a DNS lookup, is essential because computers use IP addresses to identify each other on the network, but humans find names easier to remember.</p>` },
+                    { id: 18, question: "What is DHCP?", answer: `<p>DHCP (Dynamic Host Configuration Protocol) is a network management protocol used to automatically assign IP addresses and other network configuration parameters (like subnet mask, default gateway, and DNS servers) to devices on a network. This centralizes and simplifies network administration.</p>` },
+                    { id: 19, question: "Explain the DHCP process.", answer: `<p>The DHCP process, often remembered by the acronym <strong>DORA</strong>, involves four steps:</p><ol class="list-decimal pl-6 mt-2 space-y-1"><li><strong>Discover:</strong> The client device broadcasts a DHCP Discover message to find a DHCP server.</li><li><strong>Offer:</strong> A DHCP server responds with a DHCP Offer message, containing a proposed IP address.</li><li><strong>Request:</strong> The client broadcasts a DHCP Request message, formally requesting the offered IP address.</li><li><strong>Acknowledge:</strong> The DHCP server finalizes the allocation and sends a DHCP Acknowledge message to the client, confirming the lease.</li></ol>` },
+                    { id: 22, question: "What is the difference between HTTP and HTTPS?", answer: `<div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-100 dark:bg-slate-700"><th class="p-2 border dark:border-slate-600">Feature</th><th class="p-2 border dark:border-slate-600">HTTP</th><th class="p-2 border dark:border-slate-600">HTTPS</th></tr></thead><tbody><tr><td class="p-2 border dark:border-slate-600 font-semibold">Security</td><td class="p-2 border dark:border-slate-600">Not secure; data is in plain text.</td><td class="p-2 border dark:border-slate-600">Secure; data is encrypted using SSL/TLS.</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Port</td><td class="p-2 border dark:border-slate-600">Uses port 80.</td><td class="p-2 border dark:border-slate-600">Uses port 443.</td></tr></tbody></table></div>` },
+                    { id: 28, question: "What is the difference between POP3 and IMAP?", answer: `<div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-100 dark:bg-slate-700"><th class="p-2 border dark:border-slate-600">Feature</th><th class="p-2 border dark:border-slate-600">POP3</th><th class="p-2 border dark:border-slate-600">IMAP</th></tr></thead><tbody><tr><td class="p-2 border dark:border-slate-600 font-semibold">Storage</td><td class="p-2 border dark:border-slate-600">Downloads emails to the client and deletes them from the server.</td><td class="p-2 border dark:border-slate-600">Stores emails on the server.</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Synchronization</td><td class="p-2 border dark:border-slate-600">No synchronization between devices.</td><td class="p-2 border dark:border-slate-600">Changes are synchronized across all devices.</td></tr></tbody></table></div>` },
+                ]
+            },
+            security: {
+                title: "Security",
+                info: `
+                    <h3 class="text-2xl font-bold mb-4">Key Topics for Placements</h3>
+                    <p class="mb-4 text-slate-600 dark:text-slate-400">Network security is a vast but critical field. For placements, you should focus on the fundamental technologies that protect networks and the common threats they face. Understanding the "what" and "why" of each concept is key.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-lg">Firewall</h4>
+                            <p>Explain that a firewall is a barrier that filters network traffic based on a set of security rules. Know the basic types, especially the difference between a stateless <strong>Packet-Filtering Firewall</strong> and a more advanced <strong>Stateful Firewall</strong> that tracks active connections.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">VPN, Proxy, and NAT</h4>
+                            <p>Be able to clearly differentiate these: <strong>NAT</strong> translates private IPs to a public IP, mainly for address conservation and basic security. A <strong>Proxy</strong> acts as an intermediary for requests, useful for caching and filtering. A <strong>VPN</strong> creates an encrypted tunnel for all traffic, providing the highest level of privacy and security.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Cryptography Basics</h4>
+                            <p>Understand the difference between <strong>Symmetric Encryption</strong> (one shared key, fast) and <strong>Asymmetric Encryption</strong> (public/private key pair, secure for key exchange). Mention <strong>Hashing</strong> as a one-way function used for data integrity and <strong>Digital Signatures</strong> for authentication and non-repudiation.</p>
+                        </div>
+                         <div>
+                            <h4 class="font-semibold text-lg">Common Network Attacks</h4>
+                            <p>Be prepared to briefly describe common threats like <strong>DDoS</strong> (overwhelming a server with traffic), <strong>Man-in-the-Middle</strong> (intercepting communications), and <strong>Phishing</strong> (social engineering to steal credentials).</p>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    { id: 8, question: "What is a firewall?", answer: `<p>A firewall is a network security device that monitors and filters incoming and outgoing network traffic based on predefined security policies. It acts as a barrier between a trusted internal network and an untrusted external network (like the internet), preventing unauthorized access.</p>` },
+                    { id: 30, question: "What is a VPN?", answer: `<p>A VPN (Virtual Private Network) creates a secure, encrypted connection over a less secure network, like the internet. It "tunnels" your traffic through an encrypted channel to a remote server, hiding your IP address and encrypting your data to enhance privacy and security.</p>` },
+                    { id: 31, question: "What is the difference between a proxy and a VPN?", answer: `<p>While both can hide your IP address, a VPN offers a higher level of security.</p><ul class="list-disc pl-6 mt-2 space-y-1"><li><strong>Encryption:</strong> A VPN encrypts all of your internet traffic, while a standard proxy does not.</li><li><strong>Scope:</strong> A VPN works at the operating system level, securing all traffic from your device. A proxy typically works on an application-by-application basis.</li></ul>` },
+                    { id: 46, question: "What are common network attacks?", answer: `<p>Network attacks are actions taken by malicious actors to compromise network security, steal data, or disrupt services. Some common types include:</p><ul class="list-disc pl-6 mt-2 space-y-2"><li><strong>Denial-of-Service (DoS/DDoS):</strong> An attempt to make a machine or network resource unavailable to its intended users.</li><li><strong>Man-in-the-Middle (MitM):</strong> An attacker secretly intercepts and relays communication between two parties.</li><li><strong>Phishing:</strong> Sending fraudulent messages to trick a person into revealing sensitive information.</li><li><strong>Malware:</strong> Malicious software including viruses, worms, Trojans, and ransomware.</li><li><strong>SQL Injection:</strong> Injecting malicious SQL statements into an entry field to attack a database.</li></ul>` },
+                ]
+            },
+            diagnostics: {
+                title: "Tools & Diagnostics",
+                info: `
+                     <h3 class="text-2xl font-bold mb-4">Key Topics for Placements</h3>
+                    <p class="mb-4 text-slate-600 dark:text-slate-400">Knowing how to troubleshoot network issues is a practical skill that interviewers look for. You should be familiar with the most common command-line tools, what they do, and what protocol they use.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-lg">Ping</h4>
+                            <p>Used to test connectivity between two devices. It sends an <strong>ICMP Echo Request</strong> and waits for an <strong>ICMP Echo Reply</strong>. Key outputs are the round-trip time and any packet loss.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Traceroute (tracert on Windows)</h4>
+                            <p>Used to map the path (the sequence of routers) a packet takes to a destination. It works by sending packets with progressively increasing TTL (Time-to-Live) values and uses <strong>ICMP</strong> messages to identify each hop.</p>
+                        </div>
+                         <div>
+                            <h4 class="font-semibold text-lg">ipconfig / ifconfig</h4>
+                            <p><strong>ipconfig</strong> (Windows) and <strong>ifconfig</strong> (Linux/macOS) are used to display the current TCP/IP network configuration of a device, including its IP address, subnet mask, and default gateway.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Nslookup</h4>
+                            <p>Used to query the Domain Name System (DNS) to obtain domain name or IP address mapping information.</p>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    { id: 34, question: "What is ICMP?", answer: `<p>ICMP (Internet Control Message Protocol) is a network-layer protocol used by network devices to send error messages and operational information, such as when a service is not available or a host could not be reached. The popular <code>ping</code> command uses ICMP.</p>` },
+                    { id: 35, question: "What is ping?", answer: `<p>Ping is a network utility used to test the reachability of a host on an IP network. It works by sending ICMP "echo request" packets to the target host and waiting for an ICMP "echo reply." It measures the round-trip time and reports packet loss.</p>` },
+                    { id: 36, question: "What is traceroute/tracert?", answer: `<p>Traceroute (or <code>tracert</code> on Windows) is a network diagnostic tool used to display the route (path) and measure transit delays of packets across an IP network. It works by sending packets with increasing Time-to-Live (TTL) values to map the path.</p>` },
+                ]
+            },
+            cisco: {
+                title: "Cisco Assessment & Important Questions",
+                info: `
+                    <h3 class="text-2xl font-bold mb-4">Key Topics for Placements</h3>
+                    <p class="mb-4 text-slate-600 dark:text-slate-400">This section covers topics frequently seen in Cisco-specific assessments and advanced networking interviews. These questions test deeper, practical knowledge of switching and routing concepts.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-lg">Spanning Tree Protocol (STP)</h4>
+                            <p>Its sole purpose is to prevent Layer 2 loops in networks with redundant switch paths. You must understand the election process: electing a <strong>Root Bridge</strong> and then determining <strong>Root Ports</strong>, <strong>Designated Ports</strong>, and finally <strong>Blocking Ports</strong> to break loops.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">VLANs and Trunking</h4>
+                            <p>A <strong>VLAN</strong> (Virtual LAN) logically segments a physical LAN into separate broadcast domains. This enhances security and performance. A <strong>Trunk Port</strong> is used to carry traffic for multiple VLANs between switches, using the <strong>802.1Q</strong> tagging protocol.</p>
+                        </div>
+                         <div>
+                            <h4 class="font-semibold text-lg">Routing Protocols: OSPF vs. EIGRP</h4>
+                            <p>This is a classic comparison. OSPF is an open-standard <strong>link-state</strong> protocol, while EIGRP is a Cisco-developed <strong>advanced distance-vector</strong> protocol. Key differences are their metric calculation, convergence speed (EIGRP is often faster due to its backup path calculation), and standardization.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Access Control Lists (ACLs)</h4>
+                            <p>ACLs are used to filter traffic. Differentiate between <strong>Standard ACLs</strong> (which filter only on source IP) and <strong>Extended ACLs</strong> (which can filter on source/destination IP, protocol, and port). Remember the rule of thumb: place standard ACLs close to the destination and extended ACLs close to the source.</p>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    { id: 56, question: "How does Spanning Tree Protocol (STP) prevent loops?", answer: `<p>Spanning Tree Protocol (STP) is a Layer 2 network protocol that prevents switching loops in a network with redundant paths. A switching loop can lead to broadcast storms and MAC table instability, effectively taking down the network.</p><p class="mt-2">STP prevents loops by creating a tree-like topology of the entire switched network. It does this by forcing certain redundant data paths into a standby (or blocked) state. Here’s the process:</p><ol class="list-decimal pl-6 mt-2 space-y-2"><li><strong>Elect a Root Bridge:</strong> First, all switches in the network exchange Bridge Protocol Data Units (BPDUs) to elect a single "Root Bridge". The switch with the lowest Bridge ID (a combination of priority value and MAC address) wins.</li><li><strong>Elect Root Ports:</strong> On every non-Root switch, the port with the best (lowest cost) path to the Root Bridge is designated as the "Root Port".</li><li><strong>Elect Designated Ports:</strong> On each network segment, the switch port that has the best path to the Root Bridge is elected as the "Designated Port" for that segment.</li><li><strong>Block Remaining Ports:</strong> Any port that is not a Root Port or a Designated Port is put into a "Blocking" state. These ports do not forward frames, which effectively breaks any potential loops.</li></ol>`},
+                    { id: 57, question: "Explain the difference between OSPF and EIGRP.", answer: `<p>OSPF (Open Shortest Path First) and EIGRP (Enhanced Interior Gateway Routing Protocol) are two of the most popular Interior Gateway Protocols (IGPs), but they have fundamental differences.</p><div class="overflow-x-auto mt-4"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-100 dark:bg-slate-700"><th class="p-2 border dark:border-slate-600">Feature</th><th class="p-2 border dark:border-slate-600">OSPF</th><th class="p-2 border dark:border-slate-600">EIGRP</th></tr></thead><tbody><tr><td class="p-2 border dark:border-slate-600 font-semibold">Protocol Type</td><td class="p-2 border dark:border-slate-600">Link-State</td><td class="p-2 border dark:border-slate-600">Advanced Distance-Vector</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Standard</td><td class="p-2 border dark:border-slate-600">Open Standard (IETF)</td><td class="p-2 border dark:border-slate-600">Cisco Proprietary (now open)</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Metric</td><td class="p-2 border dark:border-slate-600">Cost (based on bandwidth)</td><td class="p-2 border dark:border-slate-600">Composite (bandwidth and delay)</td></tr><tr><td class="p-2 border dark:border-slate-600 font-semibold">Convergence</td><td class="p-2 border dark:border-slate-600">Fast, but requires SPF recalculation.</td><td class="p-2 border dark:border-slate-600">Very fast due to backup path (Feasible Successor).</td></tr></tbody></table></div>`},
+                    { id: 58, question: "Subnetting Problem: Create 5 subnets from 192.168.10.0/24.", answer: `<p>You are given the IP network <strong>192.168.10.0/24</strong>. You need to create at least 5 subnets. Find the new subnet mask and list the network address, valid host range, and broadcast address for the first two subnets.</p><div class="mt-4 p-4 bg-slate-100 dark:bg-slate-800 rounded-lg space-y-3"><p><strong>Step 1: Determine the number of bits to borrow.</strong> The formula is 2<sup>n</sup> ≥ 5. 2<sup>2</sup>=4 (not enough), 2<sup>3</sup>=8 (sufficient). So, we borrow <strong>3 bits</strong>.</p><p><strong>Step 2: Calculate the new subnet mask.</strong> Original mask /24 + 3 borrowed bits = <strong>/27</strong>. In decimal, this is <strong>255.255.255.224</strong>.</p><p><strong>Step 3: Calculate the block size.</strong> 256 - 224 = <strong>32</strong>. Our subnets will be 192.168.10.0, 192.168.10.32, 192.168.10.64, etc.</p><p><strong>Step 4: List the Subnets.</strong><ul class="list-disc pl-8 space-y-2"><li><strong>Subnet 1:</strong> Network: 192.168.10.0, Range: 192.168.10.1 - 192.168.10.30, Broadcast: 192.168.10.31</li><li><strong>Subnet 2:</strong> Network: 192.168.10.32, Range: 192.168.10.33 - 192.168.10.62, Broadcast: 192.168.10.63</li></ul></div>`},
+                    { id: 59, question: "What is a VLAN and why is it used?", answer: `<p>A VLAN (Virtual Local Area Network) is a logical grouping of devices on one or more physical LANs that are configured to communicate as if they were on the same physical segment. <p class="mt-2 font-semibold">Key Purposes:</p><ul class="list-disc pl-6 mt-2 space-y-2"><li><strong>Segmentation and Security:</strong> VLANs break up large broadcast domains into smaller ones, isolating traffic between them. Communication between VLANs requires a Layer 3 device.</li><li><strong>Improved Performance:</strong> Reduces broadcast traffic, improving overall network performance.</li><li><strong>Flexibility:</strong> Allows devices to be grouped logically by department, regardless of physical location.</li></ul><p class="mt-2">The <strong>802.1Q</strong> protocol is used on trunk links to tag frames with VLAN information.</p>`},
+                ]
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const contentArea = document.getElementById('content-area');
+            const searchBox = document.getElementById('search-box');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const menuToggle = document.getElementById('menu-toggle');
+            const sidebar = document.getElementById('sidebar');
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeIconLight = document.getElementById('theme-icon-light');
+            const themeIconDark = document.getElementById('theme-icon-dark');
+
+            const applyTheme = (theme) => {
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    themeIconLight.classList.add('hidden');
+                    themeIconDark.classList.remove('hidden');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    themeIconLight.classList.remove('hidden');
+                    themeIconDark.classList.add('hidden');
+                }
+            };
+            
+            const initTheme = () => {
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                applyTheme(savedTheme);
+            };
+
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                localStorage.setItem('theme', newTheme);
+                applyTheme(newTheme);
+            });
+
+            const renderVisualizations = () => {
+                return `
+                    <div id="visualizations-content" class="space-y-8">
+                        <h2 class="text-3xl font-bold border-b pb-2 dark:border-slate-700">Visual Comparisons</h2>
+                        <p class="text-slate-600 dark:text-slate-400">This section provides visual representations of key networking concepts to aid understanding. Use these charts and diagrams to quickly compare protocols, models, and processes.</p>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md"><h3 class="text-xl font-semibold mb-4 text-center">OSI vs. TCP/IP Model Layers</h3><div class="chart-container"><canvas id="modelLayersChart"></canvas></div></div>
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md"><h3 class="text-xl font-semibold mb-4 text-center">TCP vs. UDP Header Size (Bytes)</h3><div class="chart-container"><canvas id="headerSizeChart"></canvas></div></div>
+                        </div>
+
+                        <div class="space-y-8">
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md"><h3 class="text-xl font-semibold mb-4 text-center">TCP/IP Model & Protocols</h3><div class="space-y-2">
+                                <div class="bg-sky-100 dark:bg-sky-900/50 p-4 rounded-lg text-center"><strong class="text-sky-800 dark:text-sky-300">Application</strong><p class="text-sm text-slate-600 dark:text-slate-400">HTTP, FTP, SMTP, DNS, DHCP</p></div>
+                                <div class="bg-green-100 dark:bg-green-900/50 p-4 rounded-lg text-center"><strong class="text-green-800 dark:text-green-300">Transport</strong><p class="text-sm text-slate-600 dark:text-slate-400">TCP, UDP</p></div>
+                                <div class="bg-amber-100 dark:bg-amber-900/50 p-4 rounded-lg text-center"><strong class="text-amber-800 dark:text-amber-300">Internet</strong><p class="text-sm text-slate-600 dark:text-slate-400">IP, ICMP, ARP</p></div>
+                                <div class="bg-red-100 dark:bg-red-900/50 p-4 rounded-lg text-center"><strong class="text-red-800 dark:text-red-300">Network Access</strong><p class="text-sm text-slate-600 dark:text-slate-400">Ethernet, Wi-Fi</p></div>
+                            </div></div>
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md"><h3 class="text-xl font-semibold mb-4 text-center">TCP Three-Way Handshake</h3><div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 md:space-x-4">
+                                <div class="text-center"><div class="bg-slate-200 dark:bg-slate-700 rounded-full w-20 h-20 flex items-center justify-center font-bold">Client</div></div>
+                                <div class="flex-1 text-center"><p class="font-semibold">1. SYN →</p><small class="text-slate-500 dark:text-slate-400">"I want to connect."</small></div>
+                                <div class="flex-1 text-center"><p class="font-semibold">← 2. SYN-ACK</p><small class="text-slate-500 dark:text-slate-400">"I hear you, I'm ready."</small></div>
+                                <div class="flex-1 text-center"><p class="font-semibold">3. ACK →</p><small class="text-slate-500 dark:text-slate-400">"Connection established."</small></div>
+                                <div class="text-center"><div class="bg-slate-200 dark:bg-slate-700 rounded-full w-20 h-20 flex items-center justify-center font-bold">Server</div></div>
+                            </div></div>
+                        </div>
+                    </div>`;
+            };
+            
+            const createCharts = () => {
+                const isDarkMode = document.documentElement.classList.contains('dark');
+                const gridColor = isDarkMode ? 'rgba(100, 116, 139, 0.2)' : 'rgba(203, 213, 225, 0.5)';
+                const textColor = isDarkMode ? '#e2e8f0' : '#334155';
+                Chart.defaults.color = textColor;
+                
+                if (document.getElementById('modelLayersChart')) {
+                    new Chart(document.getElementById('modelLayersChart').getContext('2d'), {type: 'bar', data: {labels:['OSI Model', 'TCP/IP Model'], datasets:[{label: '# of Layers', data:[7, 4], backgroundColor:['rgba(59, 130, 246, 0.5)', 'rgba(16, 185, 129, 0.5)'], borderColor:['rgba(59, 130, 246, 1)', 'rgba(16, 185, 129, 1)'], borderWidth: 1 }]}, options:{scales:{y:{beginAtZero: true, ticks:{stepSize: 1}, grid: { color: gridColor } }, x: { grid: { color: gridColor } } }, maintainAspectRatio: false, responsive: true}});
+                }
+                if (document.getElementById('headerSizeChart')) {
+                    new Chart(document.getElementById('headerSizeChart').getContext('2d'), {type: 'bar', data: {labels:['TCP', 'UDP'], datasets:[{label: 'Header Size (bytes)', data:[20, 8], backgroundColor:['rgba(239, 68, 68, 0.5)', 'rgba(245, 158, 11, 0.5)'], borderColor:['rgba(239, 68, 68, 1)', 'rgba(245, 158, 11, 1)'], borderWidth: 1 }]}, options:{scales:{y:{beginAtZero: true, grid: { color: gridColor } }, x: { grid: { color: gridColor } } }, maintainAspectRatio: false, responsive: true}});
+                }
+            };
+
+            const renderContent = (category = 'fundamentals', searchTerm = '') => {
+                 Chart.helpers.each(Chart.instances, (instance) => { instance.destroy(); });
+
+                if (searchTerm) {
+                    const allQuestions = Object.values(networkData).flatMap(cat => cat.questions || []);
+                    const filteredData = allQuestions.filter(item => 
+                        item.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        item.answer.toLowerCase().includes(searchTerm.toLowerCase())
+                    );
+                    contentArea.innerHTML = `
+                        <h2 class="text-3xl font-bold border-b dark:border-slate-700 pb-2 mb-6">Search Results for "${searchTerm}"</h2>
+                        ${filteredData.length > 0 ? `
+                        <div class="space-y-4" id="accordion-container">
+                            ${filteredData.map(item => `
+                                <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+                                    <button class="accordion-toggle w-full flex justify-between items-center text-left p-4 font-semibold text-lg hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                        <span>${item.question}</span>
+                                        <svg class="w-5 h-5 transform transition-transform text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </button>
+                                    <div class="accordion-content"><div class="p-4 border-t border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">${item.answer}</div></div>
+                                </div>`).join('')}
+                        </div>` : `<p class="text-center text-slate-500 py-10">No questions found matching your criteria.</p>`}
+                    `;
+                } else if (category === 'visualizations') {
+                    contentArea.innerHTML = renderVisualizations();
+                    createCharts();
+                } else {
+                    const categoryData = networkData[category];
+                    if (!categoryData) return;
+                    contentArea.innerHTML = `
+                        <h2 class="text-3xl font-bold border-b dark:border-slate-700 pb-2 mb-6">${categoryData.title}</h2>
+                        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-8">
+                            ${categoryData.info}
+                        </div>
+                        <h3 class="text-2xl font-bold border-b dark:border-slate-700 pb-2 mb-6">Frequently Asked Questions</h3>
+                        <div class="space-y-4" id="accordion-container">
+                            ${categoryData.questions.map(item => `
+                                <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+                                    <button class="accordion-toggle w-full flex justify-between items-center text-left p-4 font-semibold text-lg hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                        <span>${item.question}</span>
+                                        <svg class="w-5 h-5 transform transition-transform text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </button>
+                                    <div class="accordion-content"><div class="p-4 border-t border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">${item.answer}</div></div>
+                                </div>`).join('')}
+                        </div>
+                    `;
+                }
+            };
+            
+            const setActiveLink = (category) => {
+                navLinks.forEach(link => {
+                    if (link.dataset.category === category) {
+                        link.classList.add('bg-sky-100', 'dark:bg-slate-700', 'text-sky-700', 'dark:text-sky-400', 'font-semibold');
+                    } else {
+                        link.classList.remove('bg-sky-100', 'dark:bg-slate-700', 'text-sky-700', 'dark:text-sky-400', 'font-semibold');
+                    }
+                });
+            };
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const category = e.currentTarget.dataset.category;
+                    searchBox.value = '';
+                    renderContent(category);
+                    setActiveLink(category);
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.add('-translate-x-full');
+                    }
+                });
+            });
+            
+            searchBox.addEventListener('input', (e) => {
+                const searchTerm = e.target.value;
+                const activeCategory = document.querySelector('.nav-link.font-semibold')?.dataset.category || 'fundamentals';
+                if(searchTerm) {
+                    setActiveLink(''); // Deselect any category
+                } else {
+                    setActiveLink(activeCategory);
+                }
+                renderContent(activeCategory, searchTerm);
+            });
+            
+            contentArea.addEventListener('click', (e) => {
+                const toggle = e.target.closest('.accordion-toggle');
+                if (toggle) {
+                    const content = toggle.nextElementSibling;
+                    const icon = toggle.querySelector('svg');
+                    content.classList.toggle('open');
+                    icon.classList.toggle('rotate-180');
+                }
+            });
+
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('-translate-x-full');
+            });
+            
+            const initialCategory = window.location.hash.substring(1) || 'visualizations';
+            initTheme();
+            renderContent(initialCategory);
+            setActiveLink(initialCategory);
+        });
+    </script>
+</body>
+</html>
+
